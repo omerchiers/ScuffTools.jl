@@ -1,0 +1,213 @@
+
+
+using Plots, DataFrames, MultiLayerNFRHT, StatPlots
+
+
+# constants
+const w0 = 3.0e14
+
+export FileType, SIFlux
+export import_data, plot_scuff
+
+abstract type FileType end
+struct SIFlux <: FileType end
+struct TotalFlux <: FileType end
+
+function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
+
+    df = DataFrame()
+    df = readtable(filename, header=false, skipstart=14, separator=' ')
+
+    df1 = df[df[:x1] .== transf, :]
+    nrows = size(df1, 1)
+    ncols = size(df1, 2)
+
+    Pabs  = zeros(Float64,Int(nrows/4),5)
+    Prad  = zeros(Float64,Int(nrows/4),5)
+
+    colnames    = [:x1 , :x2, :x3, :x4, :x5]
+    newcolnames = [:Freq , :c11, :c12, :c21 ,:c22]
+
+    count = 1
+    for i = 1:4:nrows
+        Pabs[count,1] = df1[i,2]
+        Prad[count,1] = df1[i,2]
+        for j=0:3
+            Pabs[count,j+2]   = df1[i+j,4]
+            Prad[count,j+2]   = df1[i+j,5]
+        end
+        count +=1
+    end
+    dfPabs = convert(DataFrame,Pabs)
+    dfPrad = convert(DataFrame,Prad)
+
+    rename!(dfPabs,colnames,newcolnames)
+    rename!(dfPrad,colnames,newcolnames)
+
+
+    return dfPabs,dfPrad
+end
+
+" Compute total spectral flux "
+function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2; savefile = false)
+    dfPabs,dfPrad = import_data(filetype, filename)
+    dfPabs[:Freq] = w0.*dfPabs[:Freq]
+    dfPrad[:Freq] = w0.*dfPrad[:Freq]
+    wv   = dfPabs[:Freq]
+    Prad = dfPrad[columnname...]
+    Pabs = dfPabs[columnname...]
+
+    qtrans = zeros(Float64,length(wv))
+    println((wv))
+    τ      = Prad
+    #println((Prad))
+    tt(w)  = total_transfer(T1,T2,w,τ)
+    qtrans = tt.(wv)
+
+    Qtrans = [wv qtrans]
+
+    if savefile == true
+        writetable("Pabs.dat", dfPabs)
+        writetable("Prad.dat", dfPrad)
+        dfQtrans = convert(DataFrame,Qtrans)
+        writetable("Qtrans.dat", dfQtrans)
+    end
+
+
+    p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
+              yscale = :log10, ylim = (1e-30,1e-10),
+              title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
+    p2 = plot(wv, Pabs,  xscale = :log10, xlim = (wv[1],wv[end]),
+              yscale = :log10,
+              title = "Pabs",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
+    p3 = plot(wv, qtrans , xscale = :log10, yscale = :log10,
+              title = "Ptransf",  xlabel ="Frequency (rad/s)" ,ylabel= "heat transfer")
+    l = @layout [p1 p2; p3]
+    plot(p1,p2,p3,layout = l)
+
+end
+
+
+" Compute total heat_transfer as a function of temperature "
+function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax;T1=0.0, savefile = false)
+    dfPabs,dfPrad = import_data(SIFlux(), filename)
+    dfPabs[:Freq] = w0.*dfPabs[:Freq]
+    dfPrad[:Freq] = w0.*dfPrad[:Freq]
+    wv   = dfPabs[:Freq]
+    Prad = dfPrad[columnname...]
+    Pabs = dfPabs[columnname...]
+
+    Tempv = collect(linspace(Tmin,Tmax,100))
+    q_tot = zeros(Float64,100)
+    τ     = Prad
+    tt(T) = total_transfer(T1,T,wv,τ)
+    q_tot = tt.(Tempv)
+    Qtrans = [Tempv q_tot]
+    Qspect = [wv τ]
+
+    if savefile == true
+        dfQtrans = convert(DataFrame,Qtrans)
+        writetable("Qtrans_vs_T.dat", dfQtrans)
+    end
+    p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
+              yscale = :log10, #ylim = (1e-30,1e-10),
+              title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
+
+
+    p2 = plot(Tempv, q_tot , yscale = :log10,
+              title = "Qtransf",  xlabel ="Temperature (K)" ,ylabel= "Total flux (W)")
+    l = @layout [p1 p2]
+    plot(p1,p2,layout = l)
+
+end
+
+" Compute total heat_transfer as a function separation distance "
+function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = false)
+    wv = Vector{Float64}
+    Prad = Vector{Float64}
+    Pabs = Vector{Float64}
+    #transv = collect(linspace(1:10,10))
+    q_tot  = zeros(Float64,length(transv))
+    for i in trans
+        dfPabs,dfPrad = import_data(SIFlux(), filename; transf = Float64(trans[i]))
+        dfPabs[:Freq] = w0.*dfPabs[:Freq]
+        dfPrad[:Freq] = w0.*dfPrad[:Freq]
+        wv   = dfPabs[:Freq]
+        Prad = dfPrad[columnname...]
+        Pabs = dfPabs[columnname...]
+        τ    = Prad
+        q_tot[i] = total_transfer(Tmax,Tmin,wv,τ)
+    end
+
+    Qtrans = [transv q_tot]
+
+    if savefile == true
+        dfQtrans = convert(DataFrame,Qtrans)
+        writetable("Qtrans_vs_dist.dat", dfQtrans)
+    end
+    plot(trans, -q_tot,
+         #yscale = :log10, #ylim = (1e-,1e-5),
+         title = "Prad vs separation distance",
+         xlabel = "separation distance",
+         ylabel= "Total flux (W)")
+
+end
+
+
+"checks the convergence for the number of frequencies and type by coputing the total flux"
+function benchmark_freq(filetype :: SIFlux, dirname :: String , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = false)
+    discrtype = ["logspace" "linspace"]
+    discrnum  = ["N=50" ;"N=100"; "N=150" ;"N=200";"N=500" ; "N=1000" ]
+    cnt2 = 0
+    q_tot = zeros(Float64,length(discrnum),length(discrtype))
+    for dt in discrtype
+        cnt2 = cnt2 + 1
+        cnt1 = 0
+        for dn in discrnum
+            cnt1 = cnt1 + 1
+            flename = dirname*"/"*dt*"/"*dn*"/"*filename
+            dfPabs,dfPrad = import_data(filetype, flename)
+            u = dfPabs[:Freq]
+            τ = dfPrad[columnname...]
+            q_tot[cnt1,cnt2] = total_transfer(T1,T2,u.*w0,τ)
+         end
+    end
+
+    if savefile == true
+        dfqtot = convert(DataFrame,q_tot)
+        writetable("Qtot_vs_freqNum.dat", dfqtot)
+    end
+
+    rel_error = abs(q_tot[:,1].-q_tot[:,2])./(-q_tot[:,1]).*100
+    p1 = plot([50;100;150;200;500;1000],-q_tot,yaxis = :log10)
+    p2 = plot([50;100;150;200;500;1000],rel_error)
+    l = @layout [p1 p2]
+    plot(p1,p2, layout = l)
+
+end
+
+function transfer_w(T1,T2,w,τ)
+    return (bose_einstein(w,T1)-bose_einstein(w,T2))*τ
+end
+
+function total_transfer(T1,T2,w,τ)
+  t_w   = transfer_w.(T1,T2,w,τ)
+  q_tot = trapz(w,t_w)
+  return q_tot
+end
+
+"Generates frequency file that serves as imput to scuff-em"
+function frequency_file(freqnum,T,typespace :: String)
+    freq = zeros(Float64,freqnum)
+    if typespace == "linspace"
+        freq =collect(linspace(0.01*wien(T)/w0,10*wien(T)/w0,freqnum))
+        dffreq = DataFrame(Freq=freq)
+        writetable("frequency_N="*string(freqnum)*"_"*typespace*".dat", dffreq,header=false)
+    elseif typespace == "logspace"
+        wi = log10(0.01*wien(T)/w0)
+        wf = log10(10*wien(T)/w0)
+        freq =collect(logspace(wi,wf,freqnum))
+        dffreq = DataFrame(Freq=freq)
+        writetable("frequency_N="*string(freqnum)*"_"*typespace*".dat", dffreq,header=false)
+    end
+end

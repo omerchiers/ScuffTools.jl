@@ -1,6 +1,7 @@
 
 
-using Plots, DataFrames, MultiLayerNFRHT, StatPlots
+using Plots; pyplot()
+using DataFrames, MultiLayerNFRHT, StatPlots
 
 
 # constants
@@ -11,12 +12,16 @@ export import_data, plot_scuff
 
 abstract type FileType end
 struct SIFlux <: FileType end
-struct TotalFlux <: FileType end
+struct TotalFlux{T} <: FileType end
+
+
+"import the data from a file *.SIFlux. transf is the label for the transformation. If Only 1 configuration was computed,
+  then transf=DEFAULT   "
+
 
 function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 
-    df = DataFrame()
-    df = readtable(filename, header=false, skipstart=14, separator=' ')
+    df = DataFrame(readdlm(filename,' '))
 
     df1 = df[df[:x1] .== transf, :]
     nrows = size(df1, 1)
@@ -38,8 +43,8 @@ function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
         end
         count +=1
     end
-    dfPabs = convert(DataFrame,Pabs)
-    dfPrad = convert(DataFrame,Prad)
+    dfPabs = DataFrame(Pabs)
+    dfPrad = DataFrame(Prad)
 
     rename!(dfPabs,colnames,newcolnames)
     rename!(dfPrad,colnames,newcolnames)
@@ -49,8 +54,8 @@ function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 end
 
 " Compute total spectral flux "
-function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2; savefile = false)
-    dfPabs,dfPrad = import_data(filetype, filename)
+function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = false)
+    dfPabs,dfPrad = import_data(filetype, filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]
@@ -58,29 +63,25 @@ function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{S
     Pabs = dfPabs[columnname...]
 
     qtrans = zeros(Float64,length(wv))
-    println((wv))
     τ      = Prad
-    #println((Prad))
-    tt(w)  = total_transfer(T1,T2,w,τ)
-    qtrans = tt.(wv)
-
+    qtrans = transfer_w.(T1,T2,wv,τ)
     Qtrans = [wv qtrans]
 
     if savefile == true
         writetable("Pabs.dat", dfPabs)
         writetable("Prad.dat", dfPrad)
-        dfQtrans = convert(DataFrame,Qtrans)
+        dfQtrans = DataFrame(Qtrans)
         writetable("Qtrans.dat", dfQtrans)
     end
 
 
     p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
-              yscale = :log10, ylim = (1e-30,1e-10),
+              yscale = :log10,
               title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
     p2 = plot(wv, Pabs,  xscale = :log10, xlim = (wv[1],wv[end]),
               yscale = :log10,
               title = "Pabs",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-    p3 = plot(wv, qtrans , xscale = :log10, yscale = :log10,
+    p3 = plot(wv, -qtrans , xscale = :log10, yscale = :log10,
               title = "Ptransf",  xlabel ="Frequency (rad/s)" ,ylabel= "heat transfer")
     l = @layout [p1 p2; p3]
     plot(p1,p2,p3,layout = l)
@@ -89,8 +90,8 @@ end
 
 
 " Compute total heat_transfer as a function of temperature "
-function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax;T1=0.0, savefile = false)
-    dfPabs,dfPrad = import_data(SIFlux(), filename)
+function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = false)
+    dfPabs,dfPrad = import_data(SIFlux(), filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]
@@ -122,12 +123,11 @@ function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Arra
 end
 
 " Compute total heat_transfer as a function separation distance "
-function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = false)
+function plot_scuff(filetype :: Type{TotalFlux{:vsd}}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = false)
     wv = Vector{Float64}
     Prad = Vector{Float64}
     Pabs = Vector{Float64}
-    #transv = collect(linspace(1:10,10))
-    q_tot  = zeros(Float64,length(transv))
+    q_tot  = zeros(Float64,length(collect(trans)))
     for i in trans
         dfPabs,dfPrad = import_data(SIFlux(), filename; transf = Float64(trans[i]))
         dfPabs[:Freq] = w0.*dfPabs[:Freq]
@@ -139,14 +139,14 @@ function plot_scuff(filetype :: TotalFlux, filename:: String, columnname :: Arra
         q_tot[i] = total_transfer(Tmax,Tmin,wv,τ)
     end
 
-    Qtrans = [transv q_tot]
+    Qtrans = [trans q_tot]
 
     if savefile == true
         dfQtrans = convert(DataFrame,Qtrans)
         writetable("Qtrans_vs_dist.dat", dfQtrans)
     end
     plot(trans, -q_tot,
-         #yscale = :log10, #ylim = (1e-,1e-5),
+         yscale = :log10, #ylim = (1e-,1e-5),
          title = "Prad vs separation distance",
          xlabel = "separation distance",
          ylabel= "Total flux (W)")

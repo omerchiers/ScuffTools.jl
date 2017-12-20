@@ -21,7 +21,7 @@ struct TotalFlux{T} <: FileType end
 
 function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 
-    df = DataFrame(readdlm(filename,' ')) # this line will have to be modified whit DataFrames 0.11
+    df = DataFrame(readdlm(filename,' ')) # this line will have to be modified with DataFrames 0.11
 
     df1 = df[df[:x1] .== transf, :]
     nrows = size(df1, 1)

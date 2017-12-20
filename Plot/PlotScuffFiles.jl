@@ -54,7 +54,7 @@ function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 end
 
 " Compute total spectral flux "
-function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = false)
+function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
     dfPabs,dfPrad = import_data(filetype, filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
@@ -67,11 +67,11 @@ function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{S
     qtrans = transfer_w.(T1,T2,wv,τ)
     Qtrans = [wv qtrans]
 
-    if savefile == true
-        writetable("Pabs.dat", dfPabs)
-        writetable("Prad.dat", dfPrad)
+    if savefile[1] == true
+        writetable("Pabs_"*savefile[2]*".dat", dfPabs)
+        writetable("Prad_"*savefile[2]*".dat", dfPrad)
         dfQtrans = DataFrame(Qtrans)
-        writetable("Qtrans.dat", dfQtrans)
+        writetable("Qtrans_"*savefile[2]*".dat", dfQtrans)
     end
 
 
@@ -90,7 +90,7 @@ end
 
 
 " Compute total heat_transfer as a function of temperature "
-function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = false)
+function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
     dfPabs,dfPrad = import_data(SIFlux(), filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
@@ -106,9 +106,9 @@ function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, column
     Qtrans = [Tempv q_tot]
     Qspect = [wv τ]
 
-    if savefile == true
+    if savefile[1] == true
         dfQtrans = convert(DataFrame,Qtrans)
-        writetable("Qtrans_vs_T.dat", dfQtrans)
+        writetable("Qtrans_vs_T_"*savefile[2]*".dat", dfQtrans)
     end
     p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
               yscale = :log10, #ylim = (1e-30,1e-10),
@@ -123,7 +123,7 @@ function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, column
 end
 
 " Compute total heat_transfer as a function separation distance "
-function plot_scuff(filetype :: Type{TotalFlux{:vsd}}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = false)
+function plot_scuff(filetype :: Type{TotalFlux{:vsd}}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
     wv = Vector{Float64}
     Prad = Vector{Float64}
     Pabs = Vector{Float64}
@@ -141,9 +141,9 @@ function plot_scuff(filetype :: Type{TotalFlux{:vsd}}, filename:: String, column
 
     Qtrans = [trans q_tot]
 
-    if savefile == true
+    if savefile[1] == true
         dfQtrans = convert(DataFrame,Qtrans)
-        writetable("Qtrans_vs_dist.dat", dfQtrans)
+        writetable("Qtrans_vs_dist_"*savefile[2]*".dat", dfQtrans)
     end
     plot(trans, -q_tot,
          yscale = :log10, #ylim = (1e-,1e-5),
@@ -155,7 +155,7 @@ end
 
 
 "checks the convergence for the number of frequencies and type by coputing the total flux"
-function benchmark_freq(filetype :: SIFlux, dirname :: String , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = false)
+function benchmark_freq(filetype :: SIFlux, dirname :: String , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = (false," "))
     discrtype = ["logspace" "linspace"]
     discrnum  = ["N=50" ;"N=100"; "N=150" ;"N=200";"N=500" ; "N=1000" ]
     cnt2 = 0
@@ -173,9 +173,9 @@ function benchmark_freq(filetype :: SIFlux, dirname :: String , filename:: Strin
          end
     end
 
-    if savefile == true
+    if savefile[1] == true
         dfqtot = convert(DataFrame,q_tot)
-        writetable("Qtot_vs_freqNum.dat", dfqtot)
+        writetable("Qtot_vs_freqNum_"*savefile[2]*".dat", dfqtot)
     end
 
     rel_error = abs(q_tot[:,1].-q_tot[:,2])./(-q_tot[:,1]).*100
@@ -197,15 +197,15 @@ function total_transfer(T1,T2,w,τ)
 end
 
 "Generates frequency file that serves as imput to scuff-em"
-function frequency_file(freqnum,T,typespace :: String)
+function frequency_file(freqnum,T,typespace :: String ; f1=0.01 ,f2=10.0)
     freq = zeros(Float64,freqnum)
     if typespace == "linspace"
-        freq =collect(linspace(0.01*wien(T)/w0,10*wien(T)/w0,freqnum))
+        freq =collect(linspace(f1*wien(T)/w0,f2*wien(T)/w0,freqnum))
         dffreq = DataFrame(Freq=freq)
         writetable("frequency_N="*string(freqnum)*"_"*typespace*".dat", dffreq,header=false)
     elseif typespace == "logspace"
-        wi = log10(0.01*wien(T)/w0)
-        wf = log10(10*wien(T)/w0)
+        wi = log10(f1*wien(T)/w0)
+        wf = log10(f2*wien(T)/w0)
         freq =collect(logspace(wi,wf,freqnum))
         dffreq = DataFrame(Freq=freq)
         writetable("frequency_N="*string(freqnum)*"_"*typespace*".dat", dffreq,header=false)

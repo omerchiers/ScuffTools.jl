@@ -1,8 +1,17 @@
+
 """
 Scripts for launching jobs on cluster
 
 """
-
+#=
+function serial_job(args...)
+    cmd = ""
+    for (i,arg) in enumerate(args)
+       cmd *= " "*arg
+    end
+    run(`scuff-neq $cmd`)
+end
+=#
 
 function scuff_job(frequency :: String, geometry_file :: String ,  output_file :: String )
     output = outputfile*"freq="*frequency*"_radHz"

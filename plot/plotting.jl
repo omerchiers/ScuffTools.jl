@@ -8,7 +8,9 @@ const w0 = 3.0e14
 
 
 abstract type FileType end
-struct SIFlux <: FileType end
+struct SIFlux{T} <: FileType end
+SIFlux() = SIFlux{:serial}()
+
 struct TotalFlux{T} <: FileType end
 
 
@@ -50,7 +52,7 @@ end
 
 
 " Compute total heat_transfer as a function of temperature "
-function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
+function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
     dfPabs,dfPrad = import_data(SIFlux(), filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
@@ -83,7 +85,7 @@ function plot_scuff(filetype :: Type{TotalFlux{:vsT}}, filename:: String, column
 end
 
 " Compute total heat_transfer as a function separation distance "
-function plot_scuff(filetype :: Type{TotalFlux{:vsd}}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
+function plot_scuff(filetype :: TotalFlux{:vsd}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
     wv = Vector{Float64}
     Prad = Vector{Float64}
     Pabs = Vector{Float64}

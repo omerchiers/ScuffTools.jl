@@ -1,7 +1,10 @@
 
 
-"import the data from a file *.SIFlux. transf is the label for the transformation. If Only 1 configuration was computed,
-  then transf=DEFAULT   "
+"""
+Import the data from a file *.SIFlux. transf is the label for the transformation. If Only 1 configuration was computed,
+then transf=DEFAULT
+
+"""
 
 function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 
@@ -35,4 +38,31 @@ function import_data(filetype :: SIFlux, filename:: String ; transf = "DEFAULT")
 
 
     return dfPabs,dfPrad
+end
+
+"""
+Import data from parallel calculation.
+If you are in the directory containing the files, just give the
+
+"""
+
+function import_data(filetype :: SIFlux{:parallel}, dirname :: String ; transf = "DEFAULT")
+    files = readdir(dirname)
+    dfPabs,dfPrad = import_files(SIFlux(), files ; trans = transf)
+    return dfPabs,dfPrad
+end
+
+
+function import_files(filetype :: FileType , filenames :: Union{String,Vector{String}} ; transf = "DEFAULT")
+    if typeof(filenames) == String
+        dfPabs, dfPrad = import_data(filetype, filenames ; trans = transf )
+        return dfPabs,dfPrad
+    elseif typeof(filenames) == Vector{String}
+        for i = 1:length(filenames)
+            dfPabsi, dfPradi = import_data(filetype, filenames[i] ; trans = transf )
+            dfPabs = append!(dfPabs,dfPabsi)
+            dfPrad = append!(dfPrad,dfPradi)
+        end
+        return dfPabs,dfPrad
+    end
 end

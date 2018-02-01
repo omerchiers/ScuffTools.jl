@@ -14,7 +14,7 @@ end
 =#
 
 function scuff_job(frequency :: String, geometry_file :: String ,  output_file :: String )
-    output = outputfile*"freq="*frequency*"_radHz"
+    output = output_file*"freq="*frequency*"_radHz"
     run(`scuff-neq --Geometry $geometry_file --Omega $frequency --EMTPFT --FileBase $output`)
 end
 

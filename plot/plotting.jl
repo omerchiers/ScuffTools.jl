@@ -8,16 +8,24 @@ const w0 = 3.0e14
 
 
 abstract type FileType end
-struct SIFlux{T} <: FileType end
+abstract type AbstractSIFlux <: FileType end
+
+struct SIFlux{T} <: AbstractSIFlux end
 SIFlux() = SIFlux{:serial}()
 
 struct TotalFlux{T} <: FileType end
 
 
 
-" Compute total spectral flux "
-function plot_scuff(filetype :: SIFlux, filename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
-    dfPabs,dfPrad = import_data(filetype, filename ; transf = trans)
+"""
+Plots the spectral flux from a serial or parallel calculation.
+If serial calculation : give the filename
+If parallel calculation : give the name of the directory where the output files were stored
+
+"""
+
+function plot_scuff(filetype :: AbstractSIFlux, dirorfilename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+    dfPabs,dfPrad = import_data(filetype, dirorfilename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]

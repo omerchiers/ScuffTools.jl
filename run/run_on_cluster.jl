@@ -1,8 +1,5 @@
 
-"""
-Scripts for launching jobs on cluster
 
-"""
 #=
 function serial_job(args...)
     cmd = ""
@@ -13,11 +10,20 @@ function serial_job(args...)
 end
 =#
 
+"""
+Serial job
+
+"""
+
 function scuff_job(frequency :: String, geometry_file :: String ,  output_file :: String )
     output = output_file*"freq="*frequency*"_radHz"
     run(`scuff-neq --Geometry $geometry_file --Omega $frequency --EMTPFT --FileBase $output`)
 end
 
+"""
+Parallel job
+
+"""
 
 function scuff_parallel(frequencies, geometry_file :: String , output_file :: String)
     freqv = string.(collect(frequencies))

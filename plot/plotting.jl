@@ -8,24 +8,25 @@ const w0 = 3.0e14
 
 
 abstract type FileType end
-abstract type AbstractSIFlux <: FileType end
 
-struct SIFlux{T} <: AbstractSIFlux end
-SIFlux() = SIFlux{:serial}()
-
+struct SIFlux       <: FileType end
 struct TotalFlux{T} <: FileType end
 
 
 
 """
-Plots the spectral flux from a serial or parallel calculation.
-If serial calculation : give the filename
-If parallel calculation : give the name of the directory where the output files were stored
+    plot_scuff(filetype :: SIFlux,...)
 
+Plots the spectral flux and transfer function.
+
+# Arguments
+- `trans` : the number of the transformation, trans = "DEFAULT" if no transformation is given
+- `filename ::  Union{String,Vector{String}}` : can be single filename or an array of filenames for parallel computations
+- `columnname` : column name. Example : [:c12]. Only use one name at the time.
 """
 
-function plot_scuff(filetype :: AbstractSIFlux, dirorfilename:: String, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
-    dfPabs,dfPrad = import_data(filetype, dirorfilename ; transf = trans)
+function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+    dfPabs,dfPrad = import_data(filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]
@@ -45,13 +46,13 @@ function plot_scuff(filetype :: AbstractSIFlux, dirorfilename:: String, columnna
     end
 
 
-    p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
+    p1 = plot(wv, abs.(Prad), xscale = :log10, xlim = (wv[1],wv[end]),
               yscale = :log10,
               title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-    p2 = plot(wv, Pabs,  xscale = :log10, xlim = (wv[1],wv[end]),
+    p2 = plot(wv, abs.(Pabs),  xscale = :log10, xlim = (wv[1],wv[end]),
               yscale = :log10,
               title = "Pabs",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-    p3 = plot(wv, -qtrans , xscale = :log10, yscale = :log10,
+    p3 = plot(wv, abs.(qtrans) , xscale = :log10, yscale = :log10,
               title = "Ptransf",  xlabel ="Frequency (rad/s)" ,ylabel= "heat transfer")
     l = @layout [p1 p2; p3]
     plot(p1,p2,p3,layout = l)
@@ -59,9 +60,14 @@ function plot_scuff(filetype :: AbstractSIFlux, dirorfilename:: String, columnna
 end
 
 
-" Compute total heat_transfer as a function of temperature "
-function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: String, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
-    dfPabs,dfPrad = import_data(SIFlux(), filename ; transf = trans)
+"""
+    plot_scuff(filetype :: TotalFlux{:vsT},...)
+
+Computes and plots total heat_transfer as a function temparature of one of the bodies.
+
+"""
+function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
+    dfPabs,dfPrad = import_data(filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]
@@ -80,20 +86,26 @@ function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: String, columnname :
         dfQtrans = convert(DataFrame,Qtrans)
         writetable("Qtrans_vs_T_"*savefile[2]*".dat", dfQtrans)
     end
-    p1 = plot(wv, -Prad, xscale = :log10, xlim = (wv[1],wv[end]),
+    p1 = plot(wv, abs.(Prad), xscale = :log10, xlim = (wv[1],wv[end]),
               yscale = :log10, #ylim = (1e-30,1e-10),
               title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
 
 
-    p2 = plot(Tempv, q_tot , yscale = :log10,
+    p2 = plot(Tempv, abs.(q_tot) , yscale = :log10,
               title = "Qtransf",  xlabel ="Temperature (K)" ,ylabel= "Total flux (W)")
     l = @layout [p1 p2]
     plot(p1,p2,layout = l)
 
 end
 
-" Compute total heat_transfer as a function separation distance "
-function plot_scuff(filetype :: TotalFlux{:vsd}, filename:: String, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
+"""
+    plot_scuff(filetype :: TotalFlux{:vsd},...)
+
+Computes total heat_transfer as a function separation distance.
+
+"""
+
+function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
     wv = Vector{Float64}
     Prad = Vector{Float64}
     Pabs = Vector{Float64}
@@ -124,8 +136,9 @@ function plot_scuff(filetype :: TotalFlux{:vsd}, filename:: String, columnname :
 end
 
 
-"checks the convergence for the number of frequencies and type by coputing the total flux"
-function benchmark_freq(filetype :: SIFlux, dirname :: String , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = (false," "))
+"Checks the convergence for the number of frequencies and type by coputing the total flux"
+
+function benchmark_freq(filetype :: SIFlux, dirname :: Union{String,Vector{String}} , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = (false," "))
     discrtype = ["logspace" "linspace"]
     discrnum  = ["N=50" ;"N=100"; "N=150" ;"N=200";"N=500" ; "N=1000" ]
     cnt2 = 0

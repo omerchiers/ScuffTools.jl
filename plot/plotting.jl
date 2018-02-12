@@ -25,7 +25,7 @@ Plots the spectral flux and transfer function.
 - `columnname` : column name. Example : [:c12]. Only use one name at the time.
 """
 
-function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
     dfPabs,dfPrad = import_data(filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
@@ -66,7 +66,7 @@ end
 Computes and plots total heat_transfer as a function temparature of one of the bodies.
 
 """
-function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans;T1=0.0, savefile = (false," "))
+function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
     dfPabs,dfPrad = import_data(filename ; transf = trans)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]

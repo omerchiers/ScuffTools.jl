@@ -65,3 +65,25 @@ function extract_data(df :: Vector{DataFrame} , transf)
     sort!(df_temp, cols = :Freq)
     return df_temp
 end
+
+function simulation_data(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
+    dfPabs,dfPrad = import_data(filename ; transf = trans)
+    dfPabs[:Freq] = w0.*dfPabs[:Freq]
+    dfPrad[:Freq] = w0.*dfPrad[:Freq]
+    wv   = dfPabs[:Freq]
+    Prad = dfPrad[columnname...]
+    Pabs = dfPabs[columnname...]
+
+    qtrans = zeros(Float64,length(wv))
+    τ      = Prad
+    qtrans = transfer_w.(T1,T2,wv,τ)
+    Qtrans = [wv qtrans]
+
+    if savefile[1] == true
+        writetable("Pabs_"*savefile[2]*".dat", dfPabs)
+        writetable("Prad_"*savefile[2]*".dat", dfPrad)
+        dfQtrans = DataFrame(Qtrans)
+        writetable("Qtrans_"*savefile[2]*".dat", dfQtrans)
+    end
+    return Pabs, Prad, qtrans
+end

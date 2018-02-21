@@ -1,59 +1,48 @@
-"""
-File with plotting routines.
-
-"""
+# File with plotting routines
 
 # constants
 const w0 = 3.0e14
 
 
 abstract type FileType end
-
 struct SIFlux       <: FileType end
 struct TotalFlux{T} <: FileType end
-
 
 
 """
     plot_scuff(filetype :: SIFlux,...)
 
-Plots the spectral flux and transfer function.
+Plot and save (optional) the spectral flux and transfer function.
 
 # Arguments
 - `trans` : the number of the transformation, trans = "DEFAULT" if no transformation is given
 - `filename ::  Union{String,Vector{String}}` : can be single filename or an array of filenames for parallel computations
 - `columnname` : column name. Example : [:c12]. Only use one name at the time.
 """
-
 function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
-    dfPabs,dfPrad = import_data(filename ; transf = trans)
-    dfPabs[:Freq] = w0.*dfPabs[:Freq]
-    dfPrad[:Freq] = w0.*dfPrad[:Freq]
-    wv   = dfPabs[:Freq]
-    Prad = dfPrad[columnname...]
-    Pabs = dfPabs[columnname...]
 
-    qtrans = zeros(Float64,length(wv))
-    τ      = Prad
-    qtrans = transfer_w.(T1,T2,wv,τ)
-    Qtrans = [wv qtrans]
+    wv, Pabs, Prad, qtrans = simulation_data(filetype, filename , columnname ,T1,T2, trans = trans; savefile = savefile)
 
-    if savefile[1] == true
-        writetable("Pabs_"*savefile[2]*".dat", dfPabs)
-        writetable("Prad_"*savefile[2]*".dat", dfPrad)
-        dfQtrans = DataFrame(Qtrans)
-        writetable("Qtrans_"*savefile[2]*".dat", dfQtrans)
-    end
-
-
-    p1 = plot(wv, abs.(Prad), xscale = :log10, xlim = (wv[1],wv[end]),
+    p1 = plot(wv, abs.(Prad),
+              xscale = :log10,
+              xlim = (wv[1],wv[end]),
               yscale = :log10,
-              title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-    p2 = plot(wv, abs.(Pabs),  xscale = :log10, xlim = (wv[1],wv[end]),
+              title = "Prad",
+              xlabel = "Frequency (rad/s)",
+              ylabel= "Transfer function")
+    p2 = plot(wv, abs.(Pabs),
+              xscale = :log10,
+              xlim = (wv[1],wv[end]),
               yscale = :log10,
-              title = "Pabs",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-    p3 = plot(wv, abs.(qtrans) , xscale = :log10, yscale = :log10,
-              title = "Ptransf",  xlabel ="Frequency (rad/s)" ,ylabel= "heat transfer")
+              title = "Pabs",
+              xlabel = "Frequency (rad/s)",
+              ylabel= "Transfer function")
+    p3 = plot(wv, abs.(qtrans) ,
+              xscale = :log10,
+              yscale = :log10,
+              title = "Ptransf",
+              xlabel ="Frequency (rad/s)" ,
+              ylabel= "heat transfer")
     l = @layout [p1 p2; p3]
     plot(p1,p2,p3,layout = l)
 
@@ -63,36 +52,28 @@ end
 """
     plot_scuff(filetype :: TotalFlux{:vsT},...)
 
-Computes and plots total heat_transfer as a function temparature of one of the bodies.
-
+Compute and plot total heat_transfer as a function temparature of one of the bodies.
+# Arguments
+- `Tmin` : minimum value of temperature of body 2
+- `Tmax` : maximum value of temperature of body 2
+- `T1 = 0.0` : temperature of body 1. Set by default at 0.0K
 """
 function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
-    dfPabs,dfPrad = import_data(filename ; transf = trans)
-    dfPabs[:Freq] = w0.*dfPabs[:Freq]
-    dfPrad[:Freq] = w0.*dfPrad[:Freq]
-    wv   = dfPabs[:Freq]
-    Prad = dfPrad[columnname...]
-    Pabs = dfPabs[columnname...]
 
-    Tempv = collect(linspace(Tmin,Tmax,100))
-    q_tot = zeros(Float64,100)
-    τ     = Prad
-    tt(T) = total_transfer(T1,T,wv,τ)
-    q_tot = tt.(Tempv)
-    Qtrans = [Tempv q_tot]
-    Qspect = [wv τ]
+    wv, Pabs, Prad, Tempv, q_tot = simulation_data(filetype, filename, columnname ,Tmin,Tmax, trans= trans;T1=T1, savefile = savefile)
 
-    if savefile[1] == true
-        dfQtrans = convert(DataFrame,Qtrans)
-        writetable("Qtrans_vs_T_"*savefile[2]*".dat", dfQtrans)
-    end
-    p1 = plot(wv, abs.(Prad), xscale = :log10, xlim = (wv[1],wv[end]),
+    p1 = plot(wv, abs.(Prad),
+              xscale = :log10,
+              xlim = (wv[1],wv[end]),
               yscale = :log10, #ylim = (1e-30,1e-10),
-              title = "Prad",  xlabel = "Frequency (rad/s)", ylabel= "Transfer function")
-
-
-    p2 = plot(Tempv, abs.(q_tot) , yscale = :log10,
-              title = "Qtransf",  xlabel ="Temperature (K)" ,ylabel= "Total flux (W)")
+              title = "Prad",
+              xlabel = "Frequency (rad/s)",
+              ylabel= "Transfer function")
+    p2 = plot(Tempv, abs.(q_tot),
+              yscale = :log10,
+              title = "Qtransf",
+              xlabel ="Temperature (K)" ,
+              ylabel= "Total flux (W)")
     l = @layout [p1 p2]
     plot(p1,p2,layout = l)
 
@@ -102,32 +83,16 @@ end
     plot_scuff(filetype :: TotalFlux{:vsd},...)
 
 Computes total heat_transfer as a function separation distance.
-
+# Arguments
+- `T1` : Temperature of body 1
+- `T2` : Temperature of body 2
+- `trans` : vector containing the transformation label    
 """
+function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
 
-function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,Tmin,Tmax, trans; savefile = (false," "))
-    wv = Vector{Float64}
-    Prad = Vector{Float64}
-    Pabs = Vector{Float64}
-    q_tot  = zeros(Float64,length(collect(trans)))
-    for i in trans
-        dfPabs,dfPrad = import_data(SIFlux(), filename; transf = Float64(trans[i]))
-        dfPabs[:Freq] = w0.*dfPabs[:Freq]
-        dfPrad[:Freq] = w0.*dfPrad[:Freq]
-        wv   = dfPabs[:Freq]
-        Prad = dfPrad[columnname...]
-        Pabs = dfPabs[columnname...]
-        τ    = Prad
-        q_tot[i] = total_transfer(Tmax,Tmin,wv,τ)
-    end
+trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; savefile = savefile)
 
-    Qtrans = [trans q_tot]
-
-    if savefile[1] == true
-        dfQtrans = convert(DataFrame,Qtrans)
-        writetable("Qtrans_vs_dist_"*savefile[2]*".dat", dfQtrans)
-    end
-    plot(trans, -q_tot,
+    plot(trans, abs.(q_tot),
          yscale = :log10, #ylim = (1e-,1e-5),
          title = "Prad vs separation distance",
          xlabel = "separation distance",

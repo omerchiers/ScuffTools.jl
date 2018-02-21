@@ -1,17 +1,10 @@
 
 #using Plots; pyplot()
-using DataFrames, MultiLayerNFRHT, StatPlots
+using DataFrames, MultiLayerNFRHT, StatPlots, Parameters
 
 
 # constants
 const w0 = 3.0e14
-
-# Types
-export FileType, SIFlux
-export import_data,extract_data,
-       plot_scuff,benchmark_freq,
-       transfer_w,total_transfer,frequency_file,
-       scuff_job,scuff_parallel
 
 
 # Files

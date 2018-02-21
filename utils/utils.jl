@@ -1,12 +1,13 @@
-"""
-Uitlity functions
 
-"""
+#Uitlity functions
 
+" Spectral heat flux "
 function transfer_w(T1,T2,w,τ)
     return (bose_einstein(w,T1)-bose_einstein(w,T2))*τ
 end
 
+
+"Total heat flux obtained from simulation"
 function total_transfer(T1,T2,w,τ)
   t_w   = transfer_w.(T1,T2,w,τ)
   q_tot = trapz(w,t_w)

@@ -21,7 +21,7 @@ Serial job for a single frequency given as a float
 """
 function scuff_job(frequency :: Float64, geometry_file :: String ,  output_file :: String )
     freq = string(frequency)
-    output = output_file*"freq="*frequency*"_radHz"
+    output = output_file*"freq="*freq*"_radHz"
     run(`scuff-neq --Geometry $geometry_file --Omega $frequency --EMTPFT --FileBase $output`)
 end
 
@@ -36,7 +36,7 @@ when using a file containing one or many frequencies
 function scuff_job(frequencyfile :: String, geometry_file :: String ,  output_file :: String )
     lines  = readlines(frequencyfile)
     output = output_file*"freq="*lines[1]*"-"*lines[end]
-    run(`scuff-neq --Geometry $geometry_file --OmegaFile $frequency --EMTPFT --FileBase $output`)
+    run(`scuff-neq --Geometry $geometry_file --OmegaFile $frequencyfile --EMTPFT --FileBase $output`)
 end
 
 
@@ -68,8 +68,19 @@ julia> frequencies = logspace(2,3,10)
  1000.0
 ```
 """
-function scuff_parallel(frequencies, geometry_file :: String , output_file :: String)
+function scuff_parallel(frequencies :: AbstractArray, geometry_file :: String , output_file :: String)
     freqv = collect(frequencies)
+    scuff_par(frequency) = scuff_job(frequency, geometry_file, output_file)
+    pmap(scuff_par, freqv)
+end
+
+"""
+    scuff_parallel(frequencies :: AbstractString , geometry_file :: AbstractString , output_file :: AbstractString)
+when frequencies is a filename, reads the data
+"""
+
+function scuff_parallel(frequencies :: AbstractString , geometry_file :: AbstractString , output_file :: AbstractString)
+    freqv = readdlm(frequencies)
     scuff_par(frequency) = scuff_job(frequency, geometry_file, output_file)
     pmap(scuff_par, freqv)
 end

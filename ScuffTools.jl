@@ -1,4 +1,4 @@
-
+module ScuffTools
 
 using Plots
 using DataFrames
@@ -14,3 +14,5 @@ include("plot/plotting.jl")
 include("plot/importing.jl")
 include("run/run_on_cluster.jl")
 include("utils/utils.jl")
+
+end #module

@@ -1,6 +1,8 @@
 
-#using Plots; pyplot()
-using DataFrames, MultiLayerNFRHT, StatPlots
+
+using Plots
+using DataFrames
+using MultiLayerNFRHT
 
 
 # constants

@@ -68,8 +68,8 @@ function convert_to_array(dfPabs,dfPrad,columnname)
     dfPabs[:Freq] = w0.*dfPabs[:Freq]
     dfPrad[:Freq] = w0.*dfPrad[:Freq]
     wv   = dfPabs[:Freq]
-    Prad = dfPrad[columnname...]
-    Pabs = dfPabs[columnname...]
+    Prad = dfPrad[:,columnname]
+    Pabs = dfPabs[:,columnname]
     return wv, Pabs, Prad
 end
 

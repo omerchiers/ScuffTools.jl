@@ -16,9 +16,9 @@ export import_data,simulation_data,
 
 
 # Files
-include("plot/plotting.jl")
-include("plot/importing.jl")
-include("run/run_on_cluster.jl")
-include("utils/utils.jl")
+include("plotting.jl")
+include("importing.jl")
+include("run_on_cluster.jl")
+include("utils.jl")
 
 end #module

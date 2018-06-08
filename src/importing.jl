@@ -1,6 +1,8 @@
 
 
 """
+    import_data(filename:: String ; transf = "DEFAULT")
+
 extracts the desired data from a file *.EMTPFT.
 # Arguments
 - `transf = "DEFAULT"` : is the label for the transformation if Only 1 configuration was computed.
@@ -11,6 +13,14 @@ function import_data(filename:: String ; transf = "DEFAULT")
     return dfPabs,dfPrad
 end
 
+
+"""
+    import_data(filename:: Vector{String} ; transf = "DEFAULT")
+
+puts everything in a single dataframe if given a list of files.
+# Arguments
+- `transf = "DEFAULT"` : is the label for the transformation if Only 1 configuration was computed.
+"""
 function import_data(filename:: Vector{String} ; transf = "DEFAULT")
     dfPabsv = DataFrame[]
     dfPradv = DataFrame[]

@@ -19,7 +19,7 @@ Plot and save (optional) the spectral flux and transfer function.
 - `filename ::  Union{String,Vector{String}}` : can be single filename or an array of filenames for parallel computations
 - `columnname` : column name. Example : [:c12]. Only use one name at the time.
 """
-function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
+function plot_scuff(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
 
     wv, Pabs, Prad, qtrans = simulation_data(filetype, filename , columnname ,T1,T2, trans = trans; savefile = savefile)
 
@@ -58,7 +58,7 @@ Compute and plot total heat_transfer as a function temparature of one of the bod
 - `Tmax` : maximum value of temperature of body 2
 - `T1 = 0.0` : temperature of body 1. Set by default at 0.0K
 """
-function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
+function plot_scuff(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname,Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
 
     wv, Pabs, Prad, Tempv, q_tot = simulation_data(filetype, filename, columnname ,Tmin,Tmax, trans= trans;T1=T1, savefile = savefile)
 
@@ -86,9 +86,9 @@ Computes total heat_transfer as a function separation distance.
 # Arguments
 - `T1` : Temperature of body 1
 - `T2` : Temperature of body 2
-- `trans` : vector containing the transformation label    
+- `trans` : vector containing the transformation label
 """
-function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname ,T1,T2, trans; savefile = (false," "))
 
 trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; savefile = savefile)
 
@@ -100,10 +100,31 @@ trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; sav
 
 end
 
+"""
+    plot_scuff(filetype :: TotalFlux{:vsth},...)
+
+Computes total heat_transfer as a function cylinder thickness.
+# Arguments
+- `T1` : Temperature of body 1
+- `T2` : Temperature of body 2
+- `trans` : vector containing the transformation label
+"""
+function plot_scuff(filetype :: TotalFlux{:vsth}, filename :: Union{String,Vector{String}}, columnname ,T1,T2, trans; savefile = (false," "))
+
+trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; savefile = savefile)
+
+    plot(trans, abs.(q_tot),
+         yscale = :log10, #ylim = (1e-,1e-5),
+         title = "Prad vs cylinder thickness",
+         xlabel = "Cylinder thickness",
+         ylabel= "Total flux (W)")
+
+end
+
 
 "Checks the convergence for the number of frequencies and type by coputing the total flux"
 
-function benchmark_freq(filetype :: SIFlux, dirname :: Union{String,Vector{String}} , filename:: String, columnname :: Array{Symbol,1} ;T1=1.0,T2=0.0, savefile = (false," "))
+function benchmark_freq(filetype :: SIFlux, dirname :: Union{String,Vector{String}} , filename:: String, columnname ;T1=1.0,T2=0.0, savefile = (false," "))
     discrtype = ["logspace" "linspace"]
     discrnum  = ["N=50" ;"N=100"; "N=150" ;"N=200";"N=500" ; "N=1000" ]
     cnt2 = 0

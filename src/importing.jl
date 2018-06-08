@@ -100,7 +100,7 @@ Return and save (optional) the spectral flux and transfer function.
 - `filename ::  Union{String,Vector{String}}` : can be single filename or an array of filenames for parallel computations
 - `columnname` : column name. Example : [:c12]. Only use one name at the time.
 """
-function simulation_data(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
+function simulation_data(filetype :: SIFlux, filename :: Union{String,Vector{String}}, columnname ,T1,T2, trans = "DEFAULT"; savefile = (false," "))
     dfPabs,dfPrad  = import_data(filename ; transf = transf)
     wv, Pabs, Prad = convert_to_array(dfPabs,dfPrad,columnname)
 
@@ -126,7 +126,7 @@ Return and save (optional) total heat_transfer as a function temparature of one 
 - `Tmax` : maximum value of temperature of body 2
 - `T1 = 0.0` : temperature of body 1. Set by default at 0.0K
 """
-function simulation_data(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname :: Array{Symbol,1},Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
+function simulation_data(filetype :: TotalFlux{:vsT}, filename:: Union{String,Vector{String}}, columnname,Tmin,Tmax, trans= "DEFAULT";T1=0.0, savefile = (false," "))
     dfPabs,dfPrad  = import_data(filename ; transf = transf)
     wv, Pabs, Prad = convert_to_array(dfPabs,dfPrad,columnname)
 
@@ -154,7 +154,7 @@ Return and save (optional) total heat_transfer as a function separation distance
 - `T2` : Temperature of body 2
 - `trans` : vector containing the transformation label
 """
-function simulation_data(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+function simulation_data(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname ,T1,T2, trans; savefile = (false," "))
     q_tot   = zeros(Float64,length(collect(trans)))
 
     for i in trans
@@ -168,11 +168,50 @@ function simulation_data(filetype :: TotalFlux{:vsd}, filename :: Union{String,V
     end
 
     Qtrans = [trans q_tot]
-
     if savefile[1] == true
         dfQtrans = DataFrame(Qtrans)
         dc = Dict("Qtrans_vs_dist_" => dfQtrans)
         write_data(savefile[2], dc)
     end
-    return trans, q_trans
+    return trans, q_tot
+end
+
+
+"""
+    simulation_data(filetype :: TotalFlux{:vsth},...)
+
+Return and save (optional) total heat_transfer as a function cylinder thickness.
+# Arguments
+- `T1` : temperature of body 1
+- `T2` : temperature of body 2
+"""
+function simulation_data(filetype :: TotalFlux{:vsth}, filename:: Vector{String}, columnname,T1,T2, trans= "DEFAULT"; savefile = (false," "))
+
+    lengthlist = length(filename)
+    q_tot      = zeros(Float64,lengthlist)
+    thv        = zeros(Float64,lengthlist)
+
+    for i in 1:lengthlist
+        dfPabs,dfPrad  = import_data(filename[i] ; transf = trans)
+        wv, Pabs, Prad = convert_to_array(dfPabs,dfPrad,columnname)
+        q_tot[i]       = total_transfer(T1,T2,wv,Prad)
+        indexb         = searchindex(filename[i],"=")
+        indexe         = searchindex(filename[i],"microns")
+        thv[i]         = parse(Float64,filename[i][indexb+1:indexe-1])
+
+        if savefile[1] == true
+            dc = Dict("Prad_th="*"_$i" => dfPrad ,"Pabs_th="*"_$i" => dfPabs)
+            write_data(savefile[2], dc)
+        end
+
+    end
+
+    Qtrans = [thv q_tot]
+
+    if savefile[1] == true
+        dfQtrans = DataFrame(Qtrans)
+        dc = Dict("Prad" => dfPrad ,"Pabs" => dfPabs , "Qtrans_vs_th_" => dfQtrans)
+        write_data(savefile[2], dc)
+    end
+    return thv, q_tot
 end

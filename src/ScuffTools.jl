@@ -1,6 +1,6 @@
 module ScuffTools
 
-using Plots
+using Plots; plotly()
 using DataFrames
 using MultiLayerNFRHT
 
@@ -8,8 +8,13 @@ using MultiLayerNFRHT
 # constants
 const w0 = 3.0e14
 
+abstract type FileType end
+struct SIFlux       <: FileType end
+struct TotalFlux{T} <: FileType end
+
 # export of functions
-export import_data,simulation_data,
+export FileType,SIFlux,TotalFlux,
+       import_data,simulation_data,
        plot_scuff,benchmark_freq,
        scuff_job,scuff_parallel,
        transfer_w,total_transfer,frequency_file

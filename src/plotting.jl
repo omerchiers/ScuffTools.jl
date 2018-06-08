@@ -6,7 +6,14 @@ const w0 = 3.0e14
 
 abstract type FileType end
 struct SIFlux       <: FileType end
-struct TotalFlux{T} <: FileType end
+struct TotalFlux{T} <: FileType
+    parameter      :: T
+    range          :: Tuple{Float64,Float64}
+    filename       :: Union{String,Vector{String}}
+    columname      :: Array{Symbol,1}
+    temperatures   :: Tuple{Float64,Float64}
+    transformation 
+end
 
 
 """
@@ -86,7 +93,7 @@ Computes total heat_transfer as a function separation distance.
 # Arguments
 - `T1` : Temperature of body 1
 - `T2` : Temperature of body 2
-- `trans` : vector containing the transformation label    
+- `trans` : vector containing the transformation label
 """
 function plot_scuff(filetype :: TotalFlux{:vsd}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
 
@@ -99,6 +106,29 @@ trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; sav
          ylabel= "Total flux (W)")
 
 end
+
+
+"""
+    plot_scuff(filetype :: TotalFlux{:vsth},...)
+
+Computes total heat_transfer as a function cylinder thickness.
+# Arguments
+- `T1` : Temperature of body 1
+- `T2` : Temperature of body 2
+- `trans` : vector containing the transformation label
+"""
+function plot_scuff(filetype :: TotalFlux{:vsth}, filename :: Union{String,Vector{String}}, columnname :: Array{Symbol,1} ,T1,T2, trans; savefile = (false," "))
+
+trans, q_tot = simulation_data(filetype, filename, columnname ,T1,T2, trans; savefile = savefile)
+
+    plot(trans, abs.(q_tot),
+         yscale = :log10, #ylim = (1e-,1e-5),
+         title = "Prad vs cylinder thickness",
+         xlabel = "separation distance",
+         ylabel= "Total flux (W)")
+
+end
+
 
 
 "Checks the convergence for the number of frequencies and type by coputing the total flux"

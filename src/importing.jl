@@ -210,7 +210,7 @@ function simulation_data(filetype :: TotalFlux{:vsth}, filename:: Vector{String}
 
     if savefile[1] == true
         dfQtrans = DataFrame(Qtrans)
-        dc = Dict("Prad" => dfPrad ,"Pabs" => dfPabs , "Qtrans_vs_th_" => dfQtrans)
+        dc = Dict("Qtrans_vs_th_" => dfQtrans)
         write_data(savefile[2], dc)
     end
     return thv, q_tot

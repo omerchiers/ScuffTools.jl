@@ -17,7 +17,7 @@ export FileType,SIFlux,TotalFlux,
        import_data,simulation_data,
        plot_scuff,benchmark_freq,
        scuff_job,scuff_parallel,
-       transfer_w,total_transfer,frequency_file
+       transfer_w,total_transfer,frequency_file, view_factor
 
 
 # Files

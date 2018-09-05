@@ -29,3 +29,14 @@ function frequency_file(freqnum,T,typespace :: String ; f1=0.01 ,f2=10.0)
         writetable("frequency_N="*string(freqnum)*"_"*typespace*".dat", dffreq,header=false)
     end
 end
+
+
+"Computes the view factor between 2 parallel finite plates"
+function view_factor(w,l,distance)
+    x = w/distance
+    y = w/distance
+    return 2/(pi*x*y)*(log(sqrt((1 + x^2)*(1 + y^2)/(1 + x^2 + y^2)))
+                          + x*sqrt(1 + y^2)*atan(x/sqrt(1 + y^2))
+                          + y*sqrt(1 + x^2)*atan(y/sqrt(1 + x^2))
+                          - x*atan(x) - y*atan(y))
+end
